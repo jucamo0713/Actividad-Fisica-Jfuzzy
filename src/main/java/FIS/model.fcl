@@ -1,0 +1,157 @@
+FUNCTION_BLOCK prop
+
+VAR_INPUT
+        temperature : REAL; RANGE := (-45 .. 115);
+        humidity : REAL; RANGE := (0 .. 100);
+        windSpeed : REAL; RANGE := (0 .. 64);
+        UVIndex : REAL; RANGE := (1 .. 11);
+        PrecipitationProbability : REAL; RANGE := (0 .. 100);
+END_VAR
+
+VAR_OUTPUT
+        RecommendedActivityLevel : REAL; RANGE := (0 .. 100);
+        SafetyIndex : REAL; RANGE := (0 .. 100);
+        QualityDayIndex : REAL; RANGE := (0 .. 100);
+END_VAR
+
+FUZZIFY temperature
+        TERM VeryCold :=  (-20, 1) (5, 0);
+        TERM Cold := (-10, 0) (7, 1) (15, 0);
+        TERM Tempering := (12,0) (20,1) (30,0);
+        TERM Hot := (25,0) (30,1) (40,0);
+        TERM VeryHot := (35, 0) (60, 1) (115,1);
+END_FUZZIFY
+
+FUZZIFY humidity
+        TERM TooDry := (10, 1) (25, 0);
+        TERM BalancedDry := (20, 0) (30, 1) (45, 0);
+        TERM BalancedWet := (40, 0) (50, 1) (65, 0);
+        TERM TooWet := (55, 0) (80, 1);
+END_FUZZIFY
+
+FUZZIFY windSpeed
+        TERM Calm := (12, 1) (16, 0);
+        TERM Moderate := (14, 0) (20, 1) (25, 1) (32, 0);
+        TERM Fast := (30, 0) (33, 1) (40, 1) (48, 0);
+        TERM VeryFast := (46, 0) (50, 1);
+END_FUZZIFY
+
+FUZZIFY UVIndex
+        TERM Low := (2, 1) (3, 0);
+        TERM Moderate := (2, 0) (3, 1) (5, 0);
+        TERM High := (4, 0) (6, 1) (8, 0);
+        TERM VeryHigh := (7, 0) (8.5, 1) (10, 0);
+        TERM Extreme := (9, 0) (10, 1);
+END_FUZZIFY
+
+FUZZIFY PrecipitationProbability
+        TERM Low :=  (10, 1) (20, 0);
+        TERM Moderate := (15, 0) (30, 1) (45, 0);
+        TERM High := (40,0) (52,1) (65,0);
+        TERM VeryHigh := (60,0) (70,1) (85,0);
+        TERM Extreme := (75, 0) (95, 1);
+END_FUZZIFY
+
+DEFUZZIFY RecommendedActivityLevel
+        TERM LowPhysicalActivity := (10,1) (25,0);
+        TERM LightActivity := (20, 0) (30, 1) (45, 0);
+        TERM ModerateActivity := (40, 0) (50, 1) (65, 0);
+        TERM HighPerformanceActivity := (60, 0) (70, 1) (85, 0);
+        TERM PeakPerformanceActivity := (80, 0) (90, 1);
+        METHOD : COG;
+        DEFAULT := 0;
+END_DEFUZZIFY
+
+DEFUZZIFY SafetyIndex
+        TERM Dangerous := (15,1) (25,0);
+        TERM Risky := (20, 0) (30, 1) (45, 0);
+        TERM Safety := (40, 0) (55, 1) (65, 0);
+        TERM Recommended := (60, 0) (70, 1) (85, 0);
+        TERM VeryRecommended := (80, 0) (90, 1);
+        METHOD : COG;
+        DEFAULT := 0;
+END_DEFUZZIFY
+
+DEFUZZIFY QualityDayIndex
+        TERM Poor := (10,1) (25,0);
+        TERM Fair := (20, 0) (30, 1) (45, 0);
+        TERM Good := (40, 0) (50, 1) (65, 0);
+        TERM VeryGood := (60, 0) (73, 1) (85, 0);
+        TERM Excellent := (80, 0) (90, 1);
+        METHOD : COG;
+        DEFAULT := 0;
+END_DEFUZZIFY
+
+RULEBLOCK No1
+        AND : MIN;
+        ACT : MIN;
+        ACCU : MAX;
+
+        RULE 1 : IF (temperature IS VeryCold) OR (UVIndex IS High)
+                 THEN QualityDayIndex IS Poor;
+        RULE 2 : IF (temperature IS VeryCold) OR (UVIndex IS High)
+                 THEN SafetyIndex IS Risky;
+        RULE 3 : IF (temperature IS VeryCold) AND (humidity IS TooDry)
+                  THEN RecommendedActivityLevel IS LowPhysicalActivity;
+        RULE 4 : IF (temperature IS VeryCold) AND (humidity IS TooDry)
+                  THEN SafetyIndex IS Dangerous;
+        RULE 5 : IF (temperature IS VeryCold) AND (humidity IS TooDry)
+                  THEN QualityDayIndex IS Poor;
+        RULE 6 : IF (windSpeed IS Fast) AND (PrecipitationProbability IS Moderate)
+                  THEN RecommendedActivityLevel IS HighPerformanceActivity;
+        RULE 7 : IF (windSpeed IS Fast) AND (PrecipitationProbability IS Moderate)
+                  THEN QualityDayIndex IS Fair;
+        RULE 8 : IF (UVIndex IS Low) AND (PrecipitationProbability IS Low)
+                 THEN QualityDayIndex IS Good;
+        RULE 9 : IF (UVIndex IS Low) AND (PrecipitationProbability IS Low)
+                         THEN SafetyIndex IS Safety;
+        RULE 10 : IF (humidity IS TooDry) OR (UVIndex IS VeryHigh)
+                  THEN SafetyIndex IS Dangerous;
+        RULE 11 : IF (humidity IS TooDry) OR (UVIndex IS VeryHigh)
+                  THEN RecommendedActivityLevel IS LightActivity;
+        RULE 12 : IF (humidity IS TooDry) OR (UVIndex IS VeryHigh)
+                  THEN QualityDayIndex IS Fair;
+        RULE 13 : IF (UVIndex IS Extreme) OR (PrecipitationProbability IS VeryHigh)
+                  THEN RecommendedActivityLevel IS LowPhysicalActivity;
+        RULE 14 : IF (UVIndex IS Extreme) OR (PrecipitationProbability IS VeryHigh)
+                  THEN QualityDayIndex IS Poor;
+        RULE 15 : IF (UVIndex IS Extreme) OR (PrecipitationProbability IS VeryHigh)
+                  THEN SafetyIndex IS Dangerous;
+        RULE 16 : IF (temperature IS VeryHot) AND (humidity IS BalancedWet)
+                 THEN SafetyIndex IS Risky;
+        RULE 17 : IF (temperature IS Tempering) AND (humidity IS BalancedDry)
+                 THEN SafetyIndex IS Recommended;
+
+        RULE 18 : IF (temperature IS Tempering) AND (PrecipitationProbability IS Moderate)
+                 THEN QualityDayIndex IS Excellent;
+
+        RULE 19: IF (temperature IS Cold) AND (humidity IS TooWet) AND (PrecipitationProbability IS High)
+                 THEN RecommendedActivityLevel IS LowPhysicalActivity;
+
+        RULE 20: IF (UVIndex IS Low)
+                 THEN SafetyIndex IS VeryRecommended;
+
+        RULE 21: IF (windSpeed IS VeryFast) OR (PrecipitationProbability IS Extreme)
+                 THEN QualityDayIndex IS Poor;
+        RULE 22: IF (windSpeed IS VeryFast) OR (PrecipitationProbability IS Extreme)
+                 THEN SafetyIndex IS Dangerous;
+        RULE 23 : IF (humidity IS BalancedWet) AND (windSpeed IS Fast)
+                 THEN RecommendedActivityLevel IS PeakPerformanceActivity;
+        RULE 24 : IF (humidity IS BalancedWet) AND (windSpeed IS Fast)
+                 THEN QualityDayIndex IS VeryGood;
+        RULE 25 : IF (PrecipitationProbability IS Low)
+                 THEN QualityDayIndex IS Excellent;
+        RULE 26 : IF (temperature IS Cold) AND (humidity IS BalancedWet) AND (PrecipitationProbability IS Moderate)
+                 THEN QualityDayIndex IS Good;
+        RULE 27 : IF (temperature IS Cold) AND (humidity IS BalancedWet) AND (PrecipitationProbability IS Moderate)
+                 THEN RecommendedActivityLevel IS ModerateActivity;
+        RULE 28: IF (temperature IS Hot) AND (humidity IS BalancedDry)
+                 THEN RecommendedActivityLevel IS LightActivity;
+        RULE 29 : IF (windSpeed IS Calm) AND (UVIndex IS Low)
+                  THEN RecommendedActivityLevel IS ModerateActivity;
+        RULE 30 : IF (windSpeed IS Moderate) AND (PrecipitationProbability IS Moderate)
+                  THEN SafetyIndex IS Recommended;
+
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
